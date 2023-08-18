@@ -27,8 +27,10 @@
 
   <ItemGroup>
     <None Remove="Data\" />
+    <None Remove="Services\" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Data\" />
+    <Folder Include="Services\" />
   </ItemGroup>
 </Project>

@@ -1,4 +1,5 @@
 ﻿using Api.Data;
+using Api.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -30,6 +31,8 @@ builder.Services.AddIdentityCore<User>(i =>
   .AddSignInManager<SignInManager<User>>() // make use of signin manager
   .AddUserManager<UserManager<User>>() // make use of UserManager to create users
   .AddDefaultTokenProviders(); // be able to create tokens for email confirmation
+
+builder.Services.AddScoped<JWTService>();
 
 var app = builder.Build();
 
