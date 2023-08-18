@@ -4,6 +4,7 @@ using Api.DTOs;
 using Api.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Api.Controllers
 {
@@ -24,17 +25,41 @@ namespace Api.Controllers
             _userManager = userManager;
         }
 
+        [HttpPost("login")]
         public async Task<ActionResult<UserDto>> Login(LoginDto login)
         {
             var user = await _userManager.FindByNameAsync(login.Username);
             if (user == null) return Unauthorized("Invalid username or password");
 
-            if (user.EmailConfirmed == false) return Unauthorized("Please confirm you email");
+            if (user.EmailConfirmed == false) return Unauthorized("Please confirm your email");
 
             var result = await _signinManager.CheckPasswordSignInAsync(user, login.Password, false);
             if (!result.Succeeded) return Unauthorized("Invalid username or password");
 
             return createAppUserDto(user);
+        }
+
+        [HttpPost("register")]
+        public async Task<ActionResult> register(RegisterDto register)
+        {
+            if(await checkEmailExistsAsync(register.Email))
+            {
+                return BadRequest($"An existing account is using {register.Email}, email address. Please try with another email address");
+            }
+
+            var user = new User
+            {
+                FirstName = register.FirstName.ToLower(),
+                LastName = register.LastName.ToLower(),
+                UserName = register.Email.ToLower(),
+                Email = register.Email.ToLower(),
+                EmailConfirmed = true
+            };
+
+            var result = await _userManager.CreateAsync(user, register.Password);
+            if (!result.Succeeded) return BadRequest(result.Errors);
+
+            return Ok("Your account has been created, you can login");
         }
 
         #region private helper method
@@ -46,6 +71,11 @@ namespace Api.Controllers
                 LastName = user.LastName,
                 Jwt = _jwtService.createJWT(user)
             };
+        }
+
+        private async Task<bool> checkEmailExistsAsync(string email)
+        {
+            return await _userManager.Users.AnyAsync(i => i.Email == email.ToLower());
         }
         #endregion
     }
