@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Security.Claims;
 using Api.Data;
 using Api.DTOs;
 using Api.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -60,6 +62,15 @@ namespace Api.Controllers
             if (!result.Succeeded) return BadRequest(result.Errors);
 
             return Ok("Your account has been created, you can login");
+        }
+
+        [Authorize]
+        [HttpGet("refresh-user-token")]
+        public async Task<ActionResult<UserDto>> refreshUserToken()
+        {
+            var user = await _userManager.FindByNameAsync(User.FindFirst(ClaimTypes.Email)?.Value);
+
+            return createAppUserDto(user);
         }
 
         #region private helper method

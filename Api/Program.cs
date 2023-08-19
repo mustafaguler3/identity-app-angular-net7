@@ -3,6 +3,7 @@ using Api.Data;
 using Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
@@ -55,7 +56,32 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
+builder.Services.AddCors();
+
+builder.Services.Configure<ApiBehaviorOptions>(opt =>
+{
+    opt.InvalidModelStateResponseFactory = (context) =>
+    {
+        var errors = context.ModelState
+        .Where(i => i.Value.Errors.Count > 0)
+        .SelectMany(i => i.Value.Errors)
+        .Select(i => i.ErrorMessage).ToArray();
+
+        var result = new
+        {
+            Errors = errors
+        };
+
+        return new BadRequestObjectResult(result);
+    };
+});
+
 var app = builder.Build();
+
+app.UseCors(opt =>
+{
+    opt.AllowAnyHeader().AllowAnyMethod().AllowCredentials().WithOrigins(builder.Configuration["JWT:ClientUrl"]);
+});
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
