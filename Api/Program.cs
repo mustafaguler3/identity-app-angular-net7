@@ -37,6 +37,7 @@ builder.Services.AddIdentityCore<User>(i =>
   .AddDefaultTokenProviders(); // be able to create tokens for email confirmation
 
 builder.Services.AddScoped<JWTService>();
+builder.Services.AddScoped<EmailService>();
 
 // be able to authenticate users using JWT
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

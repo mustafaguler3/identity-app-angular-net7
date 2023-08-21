@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Security.Claims;
+using System.Text;
 using Api.Data;
 using Api.DTOs;
 using Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.Controllers
@@ -14,17 +16,21 @@ namespace Api.Controllers
 	[ApiController]
 	public class AccountController : ControllerBase
 	{
+        private readonly IConfiguration _config;
 		private readonly JWTService _jwtService;
 		private readonly SignInManager<User> _signinManager;
 		private readonly UserManager<User> _userManager;
+        private readonly EmailService _emailService;
 
         public AccountController(JWTService jwtService,
             SignInManager<User> signinManager,
-            UserManager<User> userManager)
+            UserManager<User> userManager,
+            EmailService emailService)
         {
             _jwtService = jwtService;
             _signinManager = signinManager;
             _userManager = userManager;
+            _emailService = emailService;
         }
 
         [HttpPost("login")]
@@ -61,6 +67,18 @@ namespace Api.Controllers
             var result = await _userManager.CreateAsync(user, register.Password);
             if (!result.Succeeded) return BadRequest(result.Errors);
 
+            try
+            {
+                if (await )
+                {
+
+                }
+            }
+            catch (Exception ex)
+            {
+                return BadRequest("Failed to send email,Please contact admin");
+            }
+
             return Ok("Your account has been created, you can login");
         }
 
@@ -74,6 +92,23 @@ namespace Api.Controllers
         }
 
         #region private helper method
+        private async Task<bool> SendConfirmMailAsync(User user)
+        {
+            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+            token = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
+            var url = $"{_config["JWT:ClientUrl"]}/{_config["Email:ConfirmationPath"]}?token={token}&email={user.Email}";
+
+            var body = $"<p>Hello : {user.FirstName} {user.LastName}</p>" +
+                "<p>Please confirm your email address by clicking on the following link</p>" +
+                    $"<p><a href=\"{url}\">Click here</a></p>" +
+                    "<p>Thank you</p>" +
+                    $"<br>{_config["Email:ApplicationName"]}";
+
+            var emailSend = new EmailSendDto(user.Email, "Confirm your email", body);
+
+            return await _emailService.SendEmailAsync(emailSend);
+        }
+
         private UserDto createAppUserDto(User user)
         {
             return new UserDto
