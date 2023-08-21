@@ -155,6 +155,32 @@ namespace Api.Controllers
             }
         }
 
+        [HttpPut("reset-password")]
+        public async Task<IActionResult> ResetPassword(PasswordResetDto model)
+        {
+            var user = await _userManager.FindByEmailAsync(model.Email);
+
+            if (user == null) return Unauthorized("This email address has not registered yet");
+
+            if (user.EmailConfirmed == false) return BadRequest("Please confirm your email address");
+
+            try
+            {
+                var decodedTokenBytes = WebEncoders.Base64UrlDecode(model.Token);
+                var decodedToken = Encoding.UTF8.GetString(decodedTokenBytes);
+
+                var result = await _userManager.ResetPasswordAsync(user, decodedToken,model.NewPassword);
+
+                if (result.Succeeded) return Ok(new JsonResult(new { title = "Password reset success", message = "Your password has been reset" }));
+
+                return BadRequest("Invalid token, Please try again");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest("Failed to send email,Please contact admin");
+            }
+        }
+
         [Authorize]
         [HttpGet("refresh-user-token")]
         public async Task<ActionResult<UserDto>> refreshUserToken()
