@@ -106,6 +106,30 @@ namespace Api.Controllers
             }
         }
 
+        [HttpPut("resend-email-confirmation-link/{email}")]
+        public async Task<IActionResult> ResendMailConfirmationLink(string email)
+        {
+            if (string.IsNullOrEmpty(email)) return BadRequest("Invalid email");
+            var user = await _userManager.FindByEmailAsync(email);
+
+            if (user == null) return Unauthorized("This email address has not been registered yet");
+
+            if (user.EmailConfirmed = true) return BadRequest("Your email address was confirmed before");
+
+            try
+            {
+                if(await SendConfirmMailAsync(user))
+                {
+                    return Ok(new JsonResult(new { title = "Confirmation link sent", message = "Please confirm your email address" }));
+                }
+                return BadRequest("Failed to send email,Please contact admin");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest("Failed to send email,Please contact admin");
+            }
+        }
+
         [Authorize]
         [HttpGet("refresh-user-token")]
         public async Task<ActionResult<UserDto>> refreshUserToken()
