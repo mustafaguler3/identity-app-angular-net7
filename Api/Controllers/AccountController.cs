@@ -69,17 +69,41 @@ namespace Api.Controllers
 
             try
             {
-                if (await )
+                if (await SendConfirmMailAsync(user))
                 {
-
+                    return Ok(new JsonResult(new { title = "Account created", message = "Your account has been created,please confirm your account" }));
                 }
+                return BadRequest("Failed to send email,Please contact admin");
             }
             catch (Exception ex)
             {
                 return BadRequest("Failed to send email,Please contact admin");
             }
 
-            return Ok("Your account has been created, you can login");
+        }
+
+        [HttpPut("confirm-email")]
+        public async Task<IActionResult> ConfirmEmail(ConfirmEmailDto confirmEmail)
+        {
+            var user = await _userManager.FindByEmailAsync(confirmEmail.Email);
+
+            if (user.EmailConfirmed = true) return BadRequest("Your email was confirmed before,Please login to your account");
+
+            try
+            {
+                var decodedTokenBytes = WebEncoders.Base64UrlDecode(confirmEmail.Token);
+                var decodedToken = Encoding.UTF8.GetString(decodedTokenBytes);
+
+                var result = await _userManager.ConfirmEmailAsync(user, decodedToken);
+
+                if (result.Succeeded) return Ok(new JsonResult(new { title = "Email confirmed", message = "Your email address is confirmed,You can login now" }));
+
+                return BadRequest("Invalid token, Please try again");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest("Invalid token, Please try again");
+            }
         }
 
         [Authorize]
