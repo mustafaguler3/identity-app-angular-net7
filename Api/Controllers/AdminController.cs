@@ -62,6 +62,100 @@ namespace Api.Controllers
             return NoContent();
         }
 
+        [HttpPost("add-edit-member")]
+        public async Task<IActionResult> AddEditMember(MemberAddEditDto model)
+        {
+            User user;
+
+            if (string.IsNullOrEmpty(model.Id))
+            {
+                // adding a new member
+                if(string.IsNullOrEmpty(model.Password) || model.Password.Length < 6)
+                {
+                    ModelState.AddModelError("errors", "Password must be at least 6 characters");
+                    return BadRequest(ModelState);
+                }
+
+                user = new User
+                {
+                    FirstName = model.FirstName.ToLower(),
+                    LastName = model.LastName.ToLower(),
+                    UserName = model.UserName.ToLower(),
+                    EmailConfirmed = true
+                };
+
+                var result = await _userManager.CreateAsync(user, model.Password);
+                if (!result.Succeeded) return BadRequest(result.Errors);
+            }else
+            {
+                // editing an existing member
+                if (!string.IsNullOrEmpty(model.Password))
+                {
+                    if(model.Password.Length < 6)
+                    {
+                        ModelState.AddModelError("errors", "Password must be at least 6 characters");
+                        return BadRequest(ModelState);
+                    }
+                }
+
+                if (IsAdminUserId(model.Id))
+                {
+                    return BadRequest(SD.SuperAdminChangeNotAllowed);
+                }
+
+                user = await _userManager.FindByIdAsync(model.Id);
+                if (user == null) return NotFound();
+
+                user.FirstName = model.FirstName.ToLower();
+                user.LastName = model.LastName.ToLower();
+                user.UserName = model.UserName.ToLower();
+
+                if (!string.IsNullOrEmpty(model.Password))
+                {
+                    await _userManager.RemovePasswordAsync(user);
+                    await _userManager.AddPasswordAsync(user, model.Password);
+                }
+            }
+
+            var userRoles = await _userManager.GetRolesAsync(user);
+
+            // removing users' existing role(s)
+            await _userManager.RemoveFromRolesAsync(user, userRoles);
+
+            foreach(var role in model.Roles.Split(",").ToArray())
+            {
+                var roleToAdd = await _roleManager.Roles.FirstOrDefaultAsync(x => x.Name == role);
+                if(roleToAdd != null)
+                {
+                    await _userManager.AddToRoleAsync(user, role);
+                }
+            }
+
+            if (string.IsNullOrEmpty(model.Id))
+            {
+                return Ok(new JsonResult(new { title = "Member created", message = $"{model.UserName} has been created" }));
+            }else
+            {
+                return Ok(new JsonResult(new { title = "Member edited", message = $"{model.UserName} has been updated" }));
+            }
+            return NoContent();
+        }
+
+        [HttpGet("get-member/{id}")]
+        public async Task<ActionResult<MemberAddEditDto>> GetMember(string id)
+        {
+            var member = await _userManager.Users.Where(x => x.UserName != SD.AdminUserName && x.Id == id)
+                .Select(x => new MemberAddEditDto
+                {
+                    Id = x.Id,
+                    UserName = x.UserName,
+                    FirstName = x.FirstName,
+                    LastName = x.LastName,
+                    Roles = string.Join(",", _userManager.GetRolesAsync(x).GetAwaiter().GetResult())
+                }).FirstOrDefaultAsync();
+            return Ok(member);
+        }
+
         [HttpGet("get-application-roles")]
         public async Task<ActionResult<string[]>> GetApplicationRoles()
         {

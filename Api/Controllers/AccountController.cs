@@ -71,6 +71,7 @@ namespace Api.Controllers
 
             var result = await _userManager.CreateAsync(user, register.Password);
             if (!result.Succeeded) return BadRequest(result.Errors);
+            await _userManager.AddToRoleAsync(user, SD.PlayerRole);
 
             try
             {
