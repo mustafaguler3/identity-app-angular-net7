@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -38,6 +39,7 @@ builder.Services.AddIdentityCore<User>(i =>
 
 builder.Services.AddScoped<JWTService>();
 builder.Services.AddScoped<EmailService>();
+builder.Services.AddScoped<VtContextSeed>();
 
 // be able to authenticate users using JWT
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -99,5 +101,19 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+#region ContextSeed
+using var scope = app.Services.CreateScope();
+try
+{
+    var contextSeedService = scope.ServiceProvider.GetService<VtContextSeed>();
+    await contextSeedService.InitializeContextAsync();
+}
+catch (Exception ex)
+{
+    var logger = scope.ServiceProvider.GetService<ILogger<Program>>();
+    logger.LogError(ex.Message, "Failed to initialize and seed the database");
+}
+
+#endregion
 app.Run();
 
