@@ -47,7 +47,25 @@ namespace Api.Controllers
             {
                 return Unauthorized(string.Format("Your account has been locked.You should wait until {0} (UTC time) to be able to login",user.LockoutEnd));
             }
-            if (!result.Succeeded) return Unauthorized("Invalid username or password");
+            if (!result.Succeeded)
+            {
+                if (!user.UserName.Equals(SD.AdminUserName))
+                {
+                    // increment access failedcount of appnetuser by 1aw
+                    await _userManager.AccessFailedAsync(user);
+                }
+
+                if(user.AccessFailedCount >= SD.MaximumLoginAttempt)
+                {
+                    await _userManager.SetLockoutEndDateAsync(user, DateTime.UtcNow.AddDays(1));
+
+                    return Unauthorized(string.Format("Your account has been locked.You should wait until {0} (UTC time) to be able to login", user.LockoutEnd));
+                }
+                return Unauthorized("Invalid username or password");
+            }
+
+            await _userManager.ResetAccessFailedCountAsync(user);
+            await _userManager.SetLockoutEndDateAsync(user, null);
 
             return await createAppUserDto(user);
         }
