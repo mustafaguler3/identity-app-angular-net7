@@ -1,4 +1,6 @@
-﻿using System.Text;
+﻿using System.Security.Claims;
+using System.Text;
+using Api;
 using Api.Data;
 using Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -77,6 +79,17 @@ builder.Services.Configure<ApiBehaviorOptions>(opt =>
 
         return new BadRequestObjectResult(result);
     };
+});
+
+builder.Services.AddAuthorization(opt =>
+{
+    opt.AddPolicy("AdminPolicy", policy => policy.RequireRole("Admin"));
+    opt.AddPolicy("ManagerPolicy", policy => policy.RequireRole("Manager"));
+    opt.AddPolicy("PlayerPolicy", policy => policy.RequireRole("Player"));
+
+    opt.AddPolicy("AdminEmailPolicy", policy => policy.RequireClaim(ClaimTypes.Email, "mustafa@example.com"));
+
+    opt.AddPolicy("VIPPolicy", policy => policy.RequireAssertion(context => SD.VIPPolicy(context)));
 });
 
 var app = builder.Build();

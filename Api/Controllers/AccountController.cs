@@ -42,9 +42,14 @@ namespace Api.Controllers
             if (user.EmailConfirmed == false) return Unauthorized("Please confirm your email");
 
             var result = await _signinManager.CheckPasswordSignInAsync(user, login.Password, false);
+
+            if (result.IsLockedOut)
+            {
+                return Unauthorized(string.Format("Your account has been locked.You should wait until {0} (UTC time) to be able to login",user.LockoutEnd));
+            }
             if (!result.Succeeded) return Unauthorized("Invalid username or password");
 
-            return createAppUserDto(user);
+            return await createAppUserDto(user);
         }
 
         [HttpPost("register")]
@@ -187,7 +192,7 @@ namespace Api.Controllers
         {
             var user = await _userManager.FindByNameAsync(User.FindFirst(ClaimTypes.Email)?.Value);
 
-            return createAppUserDto(user);
+            return await createAppUserDto(user);
         }
 
         #region private helper method
@@ -227,13 +232,13 @@ namespace Api.Controllers
             return await _emailService.SendEmailAsync(emailSend);
         }
 
-        private UserDto createAppUserDto(User user)
+        private async Task<UserDto> createAppUserDto(User user)
         {
             return new UserDto
             {
                 FirstName = user.FirstName,
                 LastName = user.LastName,
-                Jwt = _jwtService.createJWT(user)
+                Jwt = await _jwtService.createJWT(user)
             };
         }
 

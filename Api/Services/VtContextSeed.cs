@@ -41,8 +41,8 @@ namespace Api.Services
                 {
                     FirstName = "admin",
                     LastName = "jack",
-                    UserName = "mustafa@example.com",
-                    Email = "mustafa@example.com",
+                    UserName = SD.AdminRole,
+                    Email = SD.AdminRole,
                     EmailConfirmed = true
                 };
                 await _userManager.CreateAsync(admin, "123456");
